@@ -7,6 +7,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.*;
 import android.view.*;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.xdandroid.hellodaemon.*;
@@ -20,6 +22,7 @@ public class MainActivity extends Activity {
     TextView timeLabel;
     TextView waitTime;
     TextView msgTextView;
+    Button btnStart;
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         setContentView(R.layout.activity_main);
@@ -27,6 +30,7 @@ public class MainActivity extends Activity {
 
         waitTime=findViewById(R.id.waitTime);
         msgTextView=findViewById(R.id.msg);
+        btnStart=findViewById(R.id.btn_start);
         msgReceiver = new MsgReceiver();
         TraceServiceImpl.timeLabel=timeLabel.getText().toString();
         TraceServiceImpl.waitTime=Integer.parseInt(waitTime.getText().toString());
@@ -40,7 +44,12 @@ public class MainActivity extends Activity {
 
     }
 
+
+
     public void onClick(View v) {
+        //获取焦点
+        hideSoftKeyboard();
+
         switch (v.getId()) {
             case R.id.btn_start:
                 TraceServiceImpl.sShouldStopService = false;
@@ -84,5 +93,11 @@ public class MainActivity extends Activity {
 
     }
 
+
+   private void hideSoftKeyboard(){
+        SystemHelper.getFocus(btnStart);
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(btnStart.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
+    }
 
 }

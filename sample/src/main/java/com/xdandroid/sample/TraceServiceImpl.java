@@ -3,6 +3,7 @@ package com.xdandroid.sample;
 import android.content.*;
 import android.content.pm.PackageManager;
 import android.os.*;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.xdandroid.hellodaemon.*;
@@ -22,12 +23,12 @@ public class TraceServiceImpl extends AbsWorkService {
     public static boolean sShouldStopService;
     public static Disposable sDisposable;
 
-    private String updo="NULL";
-
+    private DakaInfo dakaInfo=new DakaInfo("NULL",0);
     //  my add
 
     private boolean isRunDk=false;
     public static  String timeLabel="0812";
+    private int cfCount=2;//触发次数
 
     private Intent intent2 = new Intent("com.xdandroid.sample.sendmsg");
 
@@ -60,26 +61,24 @@ public class TraceServiceImpl extends AbsWorkService {
 
     @Override
     public void startWork(Intent intent, int flags, int startId) {
-        System.out.println("检查磁盘中是否有上次销毁时保存的数据");
+        addMsg("开始");
         mPowerManager = (PowerManager) getSystemService(POWER_SERVICE);
 
         sDisposable = Observable
-                .interval(3, TimeUnit.SECONDS)
+                .interval(5, TimeUnit.SECONDS)
                 //取消任务时取消定时唤醒
                 .doOnDispose(() -> {
-                    System.out.println("停止服务。");
+                    addMsg("停止服务。");
                     cancelJobAlarmSub();
                 })
                 .subscribe(count -> {
-                    System.out.println("每 3 秒执行： " +timeLabel);
+                  //  System.out.println("每 3 秒执行： " +timeLabel);
                     SimpleDateFormat d = new SimpleDateFormat("HHmm");
                     String dd = d.format(new Date());
                      if(timeLabel!=null&&!"".equals(timeLabel)){
                          if(isTime()){
                              addMsg("时间到，执行操作");
                              dk();
-                         }else{
-                             addMsg("没执行");
                          }
                      }else{
                          addMsg("时间标签有问题");
@@ -92,11 +91,13 @@ public class TraceServiceImpl extends AbsWorkService {
         if("".equals(msg)||msg==null){
             return;
         }
-        if (msgList.size() > 10) {
+        if (msgList.size() > 20) {
             msgList.remove(0);
         }
         SimpleDateFormat d = new SimpleDateFormat("HH:mm:ss");
-        msgList.add(d.format(new Date())+":"+msg);
+        msg=d.format(new Date())+":"+msg;
+        Log.d("addMsg",msg);
+        msgList.add(msg);
     }
 
     private String getMsg(){
@@ -118,20 +119,31 @@ public class TraceServiceImpl extends AbsWorkService {
         String dd = d.format(new Date());
         int nowdd=Integer.parseInt(dd);
         String []times=timeLabel.split(",|，");
+        String msg="";
         for(String t:times){
             String[] ts=t.split("-");
             if(nowdd>=Integer.parseInt(ts[0])&&
                     nowdd<=Integer.parseInt(ts[1])  ){
                 isTime=true;
-                if(updo.equals(t)){
-                    addMsg("这个时间段已经执行过一次了");
-                    isTime=false;
-                }else{
-                    updo=t;
+                if(dakaInfo.getTimeLabel().equals(t)){//如果上一次执行的是这个时间段
+                    //addMsg("这个时间段已经执行过一次了");
+                    dakaInfo.setCount(dakaInfo.getCount()+1);
+                    if(dakaInfo.getCount()<=cfCount){
+                        msg=(t+"执行第"+dakaInfo.getCount()+"次");
+                    }else{
+                        isTime=false;
+                        msg=(t+"执行了"+cfCount+"次后不执行");
+                    }
+                }else{ //如果这个时间段还未执行
+                    dakaInfo.setTimeLabel(t);
+                    dakaInfo.setCount(1);
                 }
                 break;
+            }else{
+                msg="没到点"+timeLabel;
             }
         }
+        addMsg(msg);
         return isTime;
     }
     @Override
